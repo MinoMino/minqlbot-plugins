@@ -1,0 +1,39 @@
+CREATE TABLE Players (
+    name                TEXT PRIMARY KEY,
+    permission          INT NOT NULL,
+    last_seen           DATE,
+    games_completed     INT NOT NULL,
+    games_left          INT NOT NULL
+);
+
+CREATE TABLE Aliases (
+    name        TEXT,
+    other_name  TEXT,
+    PRIMARY KEY(name, other_name),
+    FOREIGN KEY(name) REFERENCES Players(name) ON DELETE CASCADE
+);
+
+CREATE TABLE Bans (
+    name        TEXT,
+    issued      DATE,
+    expires     DATE NOT NULL,
+    active      BOOLEAN NOT NULL,
+    reason      TEXT,
+    PRIMARY KEY (name, issued),
+    FOREIGN KEY(name) REFERENCES Players(name) ON DELETE CASCADE
+);
+
+CREATE TABLE Motd (
+    time        INT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    message     TEXT,
+    FOREIGN KEY(name) REFERENCES Players(name)
+);
+
+CREATE TABLE Ratings (
+    name        TEXT NOT NULL,
+    game_type   TEXT NOT NULL,
+    rating      INT  NOT NULL,
+    PRIMARY KEY (name, game_type),
+    FOREIGN KEY(name) REFERENCES Players(name) ON DELETE CASCADE
+);
