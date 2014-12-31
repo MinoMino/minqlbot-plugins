@@ -246,7 +246,7 @@ class SimpleIrc(asynchat.async_chat):
                 password = self.handler.config["IRC"]["QPassword"]
                 self.msg("Q@CServe.quakenet.org", "AUTH {0} {1}".format(username, password))
                 if "QHidden" in self.handler.config["IRC"] and self.handler.config["IRC"].getboolean("QHidden"):
-                    self.channel(self.nick, "+x")
+                    self.mode(self.nick, "+x")
         
             self.out("JOIN {0},{1} {2},{2}\r\n".format(self.channel, self.admin_channel, self.password))
         
@@ -264,8 +264,8 @@ class SimpleIrc(asynchat.async_chat):
     def part(self, channels):
         self.out("PART {0}\r\n".format(channels))
 
-    def channel(self, what, channel):
-        self.out("CHANNEL {0} {1}\r\n".format(what, channel))
+    def mode(self, what, mode):
+        self.out("MODE {0} {1}\r\n".format(what, mode))
 
     def kick(self, channel, nick, reason):
         self.out("KICK {0} {1}:{2}\r\n".format(channel, nick, reason))
