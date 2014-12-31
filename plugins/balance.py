@@ -108,7 +108,7 @@ class balance(minqlbot.Plugin):
     def handle_player_connect(self, player):
         gametype = self.game().short_type
         if not self.is_cached(player.clean_name, gametype):
-            self.fetch_player_ratings([player.clean_name.lower()], gametype)
+            self.fetch_player_ratings([player.clean_name.lower()], None, gametype)
 
     def cmd_teams(self, player, msg, channel):
         teams = self.teams()
@@ -223,7 +223,7 @@ class balance(minqlbot.Plugin):
                 del self.cache[name][short_game_type]
             return
 
-    def fetch_player_ratings(self, names, channel=minqlbot.CHAT_CHANNEL, game_type="ca", use_local=True):
+    def fetch_player_ratings(self, names, channel=minqlbot.CHAT_CHANNEL, game_type="ca", use_local=True, use_aliases=True):
         """Fetch ratings from the database and fall back to QLRanks.
 
         Takes into account ongoing lookups to avoid sending multiple requests for a player.
@@ -260,11 +260,11 @@ class balance(minqlbot.Plugin):
 
         # We fall back to QLRanks for players we don't have, but stop if we want a gametype it doesn't provide.
         if names and game_type in QLRANKS_GAMETYPES:
-            if "Balance" in config:
-                use_aliases = config["Balance"].getboolean("UseAliases", fallback=True)
+            if use_aliases and "Balance" in config:
+                conf_alias = config["Balance"].getboolean("UseAliases", fallback=True)
             else:
-                use_aliases = False
-            lookup = qlranks.QlRanks(self, names, check_alias=use_aliases)
+                conf_alias = False
+            lookup = qlranks.QlRanks(self, names, check_alias=conf_alias)
             with self.lock:
                 self.lookups[lookup.uid] = (lookup, names, channel)
             lookup.start()
@@ -299,7 +299,7 @@ class balance(minqlbot.Plugin):
                     # Enforce floor and ceiling values if we have them.
                     if floor and player[game_type]["elo"] < floor:
                         player[game_type]["elo"] = floor
-                    if ceiling and player[game_type]["elo"] > ceiling:
+                    elif ceiling and player[game_type]["elo"] > ceiling:
                         player[game_type]["elo"] = ceiling
 
                 with self.lock:
@@ -354,7 +354,7 @@ class balance(minqlbot.Plugin):
         self.fails += 1
         with self.lock:
             if self.fails < FAILS_ALLOWED or self.lookups[lookup.uid][2] == None:
-                del self.lookup[lookup.uid]
+                del self.lookups[lookup.uid]
                 return
             elif lookup.status == -2:
                 err_msg = "^7The connection to QLRanks timed out."
@@ -362,7 +362,7 @@ class balance(minqlbot.Plugin):
                 err_msg = "^7The connection to QLRanks failed with error code: ^6{}".format(lookup.status)
             channel = self.lookups[lookup.uid][2]
             channel.reply(err_msg)
-            del self.lookup[lookup.uid]
+            del self.lookups[lookup.uid]
 
     def execute_pending(self):
         """Checks for pending tasks and execute them.
@@ -400,13 +400,13 @@ class balance(minqlbot.Plugin):
                 if not_cached:
                     if ("individual", name, channel, game_type) not in self.pending:
                         self.pending.append(("individual", name, channel, game_type))
-                    self.fetch_player_ratings(not_cached, channel, game_type, use_local=False)
+                    self.fetch_player_ratings(not_cached, channel, game_type, use_local=False, use_aliases=False)
 
                 return False
 
         long_game_type = minqlbot.GAMETYPES[minqlbot.GAMETYPES_SHORT.index(game_type)]
-        channel.reply("^6{}^7's QLRanks rating in {} is ^6{}^7."
-            .format(name, long_game_type, self.cache[name][game_type]["elo"]))
+        channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7."
+            .format(name, self.cache[name][game_type]["rank"], long_game_type, self.cache[name][game_type]["elo"]))
         return True
 
 
