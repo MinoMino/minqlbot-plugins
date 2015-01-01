@@ -66,6 +66,7 @@ class QlRanks(threading.Thread):
                 name = player["nick"].lower()
                 if name in self.aliases:
                     player["nick"] = self.aliases[name]
+                    player["alias_of"] = name
                     del self.aliases[name]
 
             self.plugin.cache_players(data, self)
@@ -77,6 +78,8 @@ class QlRanks(threading.Thread):
             minqlbot.debug("========== ERROR: QLRanks Fetcher #{} ==========".format(self.uid))
             for line in e.split("\n"):
                 minqlbot.debug(line)
+            self.plugin.cache_players(None, self)
+            self.plugin.execute_pending()
     
     def get_data(self, url, path, post_data=None, headers={}):
         c = http.client.HTTPConnection(url, timeout=10)
