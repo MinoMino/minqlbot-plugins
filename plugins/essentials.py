@@ -126,13 +126,13 @@ class essentials(minqlbot.Plugin):
 
     def cmd_yes(self, player, msg, channel):
         if self.is_vote_active():
-            self.yes()
+            self.vote_yes()
 
         channel.reply("^7There's no active vote!")
 
     def cmd_no(self, player, msg, channel):
         if self.is_vote_active():
-            self.no()
+            self.vote_yes()
 
         channel.reply("^7There's no active vote!")
 
