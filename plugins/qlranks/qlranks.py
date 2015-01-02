@@ -45,13 +45,15 @@ class QlRanks(threading.Thread):
     def run(self):
         try:
             self.plugin.debug("QLRanks thread #{} started!".format(self.uid))
-            for i in range(len(self.players)):
-                c = self.plugin.db_query("SELECT name FROM Aliases WHERE other_name=?", self.players[i])
-                res = c.fetchone()
-                if res:
-                    self.aliases[res["name"]] = self.players[i]
-                    self.players[i] = res["name"]
+            if self.check_alias:
+                for i in range(len(self.players)):
+                    c = self.plugin.db_query("SELECT name FROM Aliases WHERE other_name=?", self.players[i])
+                    res = c.fetchone()
+                    if res:
+                        self.aliases[res["name"]] = self.players[i]
+                        self.players[i] = res["name"]
                 self.plugin.db_close()
+            
             try:
                 player_list = "+".join(self.players)
                 data = self.get_data("www.qlranks.com", "/api.aspx?nick={}".format(player_list))
@@ -61,13 +63,14 @@ class QlRanks(threading.Thread):
                 self.plugin.execute_pending() # execute_pending has endless loop prevention.
                 return
 
-            # Replace alias nicknames with real names.
-            for player in data["players"]:
-                name = player["nick"].lower()
-                if name in self.aliases:
-                    player["nick"] = self.aliases[name]
-                    player["alias_of"] = name
-                    del self.aliases[name]
+            if self.check_alias:
+                # Replace alias nicknames with real names.
+                for player in data["players"]:
+                    name = player["nick"].lower()
+                    if name in self.aliases:
+                        player["nick"] = self.aliases[name]
+                        player["alias_of"] = name
+                        del self.aliases[name]
 
             self.plugin.cache_players(data, self)
             # Check for pending teams info/balancing needed. Execute if so.
