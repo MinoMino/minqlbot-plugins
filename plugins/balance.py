@@ -189,11 +189,12 @@ class balance(minqlbot.Plugin):
 
     def cmd_getrating(self, player, msg, channel):
         if len(msg) < 2:
-            return minqlbot.RET_USAGE
+            name = player.clean_name.lower()
+        else:
+            name = self.clean_text(msg[1]).lower()
         
         game = self.game()
         short_game_type = game.short_type
-        name = self.clean_text(msg[1]).lower()
         c = self.db_query("SELECT rating FROM Ratings WHERE name=? AND game_type=?", name, short_game_type)
         row = c.fetchone()
         if not row:
