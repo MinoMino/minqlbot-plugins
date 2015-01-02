@@ -36,7 +36,8 @@ class IrcAdminChannel(minqlbot.AbstractChannel):
 
     def reply(self, msg):
         msg = self.irc_plugin.translate_colors(msg)
-        self.irc_plugin.privmsg_admin(msg) 
+        for s in self.split_long_msg(msg, limit=450):
+            self.irc_plugin.privmsg_admin(s)
 
 # Quake will consume any character succeeding a '^' except for that same character,
 # and then convert it into a color. There are 8 different colors, so Quake will
@@ -187,7 +188,6 @@ class SimpleIrc(asynchat.async_chat):
         self.admin_channel = admin_channel
         self.password = password
         self.handler = handler
-        self.db_connection = self.handler.db_connect()
         
         self.ibuf = ""
         self.set_terminator(b"\r\n")
