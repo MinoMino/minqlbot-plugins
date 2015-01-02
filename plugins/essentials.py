@@ -58,6 +58,7 @@ class essentials(minqlbot.Plugin):
         self.add_command("db", self.cmd_db, 5, usage="<query>")
         self.add_command("seen", self.cmd_seen, usage="<full_name>")
         self.add_command("time", self.cmd_time, usage="[timezone_offset]")
+        self.add_command(("teamsize", "ts"), self.cmd_teamsize, usage="<size>")
         self.add_command("exit", self.cmd_exit, 5)
 
         self.vote_resolve_timer = None
@@ -267,7 +268,7 @@ class essentials(minqlbot.Plugin):
         self.opsay(" ".join(msg[1:]))
         
     def cmd_help(self, player, msg, channel):
-        channel.reply("^7minqlbot v{} - See ^6http://minomino.org/quake/ ^7for more info."
+        channel.reply("^7minqlbot {} - See ^6http://minomino.org/quake/ ^7for more info."
             .format(minqlbot.__version__))
     
     def cmd_db(self, player, msg, channel):
@@ -337,6 +338,18 @@ class essentials(minqlbot.Plugin):
         else:
             channel.reply("^7The current time is: ^6{} UTC"
                 .format(now.strftime(TIME_FORMAT)))
+
+    def cmd_teamsize(self, player, msg, channel):
+        if len(msg) < 2:
+            return minqlbot.RET_USAGE
+        
+        try:
+            n = int(msg[1])
+        except ValueError:
+            channel.reply("^7Unintelligible size.")
+        
+        if not self.teamsize(n):
+            channel.reply("^7Try again after the current vote.")
 
     def cmd_exit(self, player, msg, channel):
         #TODO: IMPLEMENT
