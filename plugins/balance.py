@@ -101,9 +101,9 @@ class balance(minqlbot.Plugin):
                 teams = self.teams()
                 total = len(teams["red"]) + len(teams["blue"])
                 if total % 2 == 0:
-                    self.delay(5, self.average_balance)
+                    self.delay(5, self.average_balance, args=(minqlbot.CHAT_CHANNEL, self.game().short_type))
                 else:
-                    self.msg("^7I can't balance when the total number of players is an even number.")
+                    self.msg("^7I can't balance when the total number of players is not an even number.")
 
     def handle_player_connect(self, player):
         gametype = self.game().short_type
@@ -124,7 +124,7 @@ class balance(minqlbot.Plugin):
         if total % 2 == 0:
             self.average_balance(channel, self.game().short_type)
         else:
-            channel.reply("^7I can't balance when the total number of players is an even number.")
+            channel.reply("^7I can't balance when the total number of players is not an even number.")
 
     def cmd_do(self, player, msg, channel):
         if self.suggested_pair:
@@ -224,7 +224,7 @@ class balance(minqlbot.Plugin):
                 del self.cache[name][short_game_type]
             return
 
-    def fetch_player_ratings(self, names, channel=minqlbot.CHAT_CHANNEL, game_type="ca", use_local=True, use_aliases=True):
+    def fetch_player_ratings(self, names, channel, game_type, use_local=True, use_aliases=True):
         """Fetch ratings from the database and fall back to QLRanks.
 
         Takes into account ongoing lookups to avoid sending multiple requests for a player.
@@ -291,7 +291,8 @@ class balance(minqlbot.Plugin):
                 if "CeilingRating" in config:
                     ceiling = int(config["CeilingRating"])
 
-            self.fails = 0 # Reset fail counter.
+            with self.lock:
+                self.fails = 0 # Reset fail counter.
             for player in ratings["players"]:
                 name = player["nick"]
                 del player["nick"]
@@ -304,14 +305,20 @@ class balance(minqlbot.Plugin):
                         player[game_type]["elo"] = ceiling
 
                 with self.lock:
-                    if name not in self.cache:
-                        d = {}
-                        d.update(player)
-                        self.cache[name] = d
+                    # If it's an alias, go ahead and cache the real one as well.
+                    if "alias_of" in player:
+                        real_name = player["alias_of"]
+                        self.cache[real_name] = player.copy()
+                        # Make sure real name isn't treated as alias.
+                        del self.cache[real_name]["alias_of"]
+
+                    if name not in self.cache: # Already in our cache?
+                        self.cache[name] = player
                     else:
+                        self.cache[name]["alias_of"] = player["alias_of"]
                         # Gotta be careful not to overwrite game types we've manually set ratings for.
                         for game_type in player:
-                            if game_type not in self.cache[name]:
+                            if game_type not in self.cache[name] and game_type != "alias_of":
                                 self.cache[name][game_type] = player[game_type]
         
             # The lookup's been dealt with, so we get rid of it.
@@ -319,7 +326,7 @@ class balance(minqlbot.Plugin):
                 with self.lock:
                     del self.lookups[lookup.uid]
 
-    def is_cached(self, name, game_type="ca"):
+    def is_cached(self, name, game_type):
         """Checks if a player is cached or not.
 
         """
@@ -329,7 +336,7 @@ class balance(minqlbot.Plugin):
             else:
                 return False
 
-    def not_cached(self, game_type="ca", player_list=None):
+    def not_cached(self, game_type, player_list=None):
         """Get a list of players that are not cached.
 
         """
@@ -352,8 +359,8 @@ class balance(minqlbot.Plugin):
         """Handle lookups that failed due to timeouts and such
 
         """
-        self.fails += 1
         with self.lock:
+            self.fails += 1
             if self.fails < FAILS_ALLOWED or self.lookups[lookup.uid][2] == None:
                 del self.lookups[lookup.uid]
                 return
@@ -372,25 +379,18 @@ class balance(minqlbot.Plugin):
         # If limit is hit, clear pending requests and fail counter, then do nothing.
         # We don't want to keep requesting if something's wrong, but rather let a player
         # or an event trigger it again.
-        if self.fails >= FAILS_ALLOWED:
-            self.fails = 0
-            with self.lock:
+        with self.lock:
+            if self.fails >= FAILS_ALLOWED:
+                self.fails = 0
                 self.pending.clear()
-            return
+                return
 
         with self.lock:
             for task in self.pending.copy():
-                if task[0] == "teams":
-                    if self.teams_info(*task[1:]):
-                        self.pending.remove(task)
-                elif task[0] == "avg_balance":
-                    if self.average_balance(*task[1:]):
-                        self.pending.remove(task)
-                elif task[0] == "individual":
-                    if self.individual_rating(*task[1:]):
-                        self.pending.remove(task)
+                if task[0](*task[1]):
+                    self.pending.remove(task)
 
-    def individual_rating(self, name, channel, game_type="ca"):
+    def individual_rating(self, name, channel, game_type):
         not_cached = self.not_cached(game_type, (name,))
         if not_cached:
             with self.lock:
@@ -399,20 +399,29 @@ class balance(minqlbot.Plugin):
                         if n in not_cached:
                             not_cached.remove(n)
                 if not_cached:
-                    if ("individual", name, channel, game_type) not in self.pending:
-                        self.pending.append(("individual", name, channel, game_type))
-                    self.fetch_player_ratings(not_cached, channel, game_type, use_local=False, use_aliases=False)
+                    if (self.individual_rating, (name, channel, game_type)) not in self.pending:
+                        self.pending.append((self.individual_rating, (name, channel, game_type)))
+                    self.fetch_player_ratings(not_cached, channel, game_type, use_local=False, use_aliases=True)
 
                 return False
 
         long_game_type = minqlbot.GAMETYPES[minqlbot.GAMETYPES_SHORT.index(game_type)]
-        channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7."
-            .format(name, self.cache[name][game_type]["rank"], long_game_type, self.cache[name][game_type]["elo"]))
-        return True
+        if self.cache[name][game_type]["rank"] == 0:
+            channel.reply("^7QLRanks has no data on ^6{}^7 for {}.".format(name, long_game_type))
+            return True
+        elif "alias_of" in self.cache[name]:
+            channel.reply("^6{}^7 is an alias of ^6{}^7, who is ranked #^6{}^7 in {} with a rating of ^6{}^7."
+                .format(name, self.cache[name]["alias_of"], self.cache[name][game_type]["rank"],
+                        long_game_type, self.cache[name][game_type]["elo"]))
+            return True
+        else:
+            channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7."
+                .format(name, self.cache[name][game_type]["rank"], long_game_type, self.cache[name][game_type]["elo"]))
+            return True
 
 
 
-    def teams_info(self, channel=minqlbot.CHAT_CHANNEL, game_type="ca"):
+    def teams_info(self, channel, game_type):
         """Send average team ratings and an improvement suggestion to whoever asked for it.
 
         """
@@ -432,8 +441,8 @@ class balance(minqlbot.Plugin):
                         if n in not_cached:
                             not_cached.remove(n)
                 if not_cached:
-                    if ("teams", channel, game_type) not in self.pending:
-                        self.pending.append(("teams", channel, game_type))
+                    if (self.teams_info, (channel, game_type)) not in self.pending:
+                        self.pending.append((self.teams_info, (channel, game_type)))
                     self.fetch_player_ratings(not_cached, channel, game_type)
 
                 # Let a later call to execute_pending come back to us.
@@ -477,7 +486,7 @@ class balance(minqlbot.Plugin):
         
         return True
 
-    def average_balance(self, channel=minqlbot.CHAT_CHANNEL, game_type="ca"):
+    def average_balance(self, channel, game_type):
         """Balance teams based on average team ratings.
 
         """
@@ -497,8 +506,8 @@ class balance(minqlbot.Plugin):
                         if n in not_cached:
                             not_cached.remove(n)
                 if not_cached:
-                    if ("avg_balance", channel, game_type) not in self.pending:
-                        self.pending.append(("avg_balance", channel, game_type))
+                    if (self.average_balance, (channel, game_type)) not in self.pending:
+                        self.pending.append((self.average_balance, (channel, game_type)))
                     self.fetch_player_ratings(not_cached, channel, game_type)
                 # Let a later call to execute_pending come back to us.
                 return False
@@ -520,7 +529,7 @@ class balance(minqlbot.Plugin):
                         
             # Start shuffling by looping through our suggestion function until
             # there are no more switches that can be done to improve teams.
-            switch = self.suggest_switch(teams)
+            switch = self.suggest_switch(teams, game_type)
             if switch:
                 self.msg("^7Balancing teams...")
                 while switch:
@@ -532,15 +541,15 @@ class balance(minqlbot.Plugin):
                     teams["red"].append(p2)
                     teams["blue"].remove(p2)
                     teams["red"].remove(p1)
-                    switch = self.suggest_switch(teams)
-                avg_red = self.team_average(teams["red"])
-                avg_blue = self.team_average(teams["blue"])
+                    switch = self.suggest_switch(teams, game_type)
+                avg_red = self.team_average(teams["red"], game_type)
+                avg_blue = self.team_average(teams["blue"], game_type)
                 self.msg("^7Done! ^1RED^7: {} - ^4BLUE^7: {}".format(round(avg_red), round(avg_blue)))
             else:
                 channel.reply("^7Teams are good! Nothing to balance.")
             return True
 
-    def suggest_switch(self, teams, game_type="ca"):
+    def suggest_switch(self, teams, game_type):
         """Suggest a switch based on average team ratings.
 
         """
@@ -570,7 +579,7 @@ class balance(minqlbot.Plugin):
         else:
             return None
 
-    def team_average(self, team, game_type="ca"):
+    def team_average(self, team, game_type):
         """Calculates the average rating of a team.
 
         """
