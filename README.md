@@ -6,9 +6,9 @@ A collection of plugins for minqlbot.
 This is a repository of the default config file, the database tables (including an initialized empty database),
 and more importantly the plugins themselves.
 
+Documentation will come later.
+
 Installation
 ============
 
-The contents of this file should go in the "python" folder, relative to quakelive.exe
-
-MORE COMING SOON, SORRY FOR SHITTY DOCUMENTATION.
+Look at the [main repository](https://github.com/MinoMino/minqlbot-plugin) for instructions on how to use the bot.
