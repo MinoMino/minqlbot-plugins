@@ -128,14 +128,14 @@ class essentials(minqlbot.Plugin):
     def cmd_yes(self, player, msg, channel):
         if self.is_vote_active():
             self.vote_yes()
-
-        channel.reply("^7There's no active vote!")
+        else:
+            channel.reply("^7There's no active vote!")
 
     def cmd_no(self, player, msg, channel):
         if self.is_vote_active():
             self.vote_yes()
-
-        channel.reply("^7There's no active vote!")
+        else:
+            channel.reply("^7There's no active vote!")
 
     def cmd_switch(self, player, msg, channel):
         if len(msg) < 3:
@@ -232,14 +232,14 @@ class essentials(minqlbot.Plugin):
     def cmd_allready(self, player, msg, channel):
         if self.game().state == "warmup":
             self.allready()
-
-        channel.reply("^7But the game's already on!")
+        else:
+            channel.reply("^7But the game's already on!")
         
     def cmd_abort(self, player, msg, channel):
         if self.game().state == "in_progress":
             self.abort()
-
-        channel.reply("^7But the game isn't even on!")
+        else:
+            channel.reply("^7But the game isn't even on!")
     
     def cmd_shuffle(self, player, msg, channel):
         if not self.shuffle():
