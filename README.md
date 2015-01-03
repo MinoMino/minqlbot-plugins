@@ -11,4 +11,4 @@ Documentation will come later.
 Installation
 ============
 
-Look at the [main repository](https://github.com/MinoMino/minqlbot-plugin) for instructions on how to use the bot.
+Look at the [main repository](https://github.com/MinoMino/minqlbot) for instructions on how to use the bot.
