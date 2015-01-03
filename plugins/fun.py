@@ -21,7 +21,7 @@ import minqlbot
 class fun(minqlbot.Plugin):
 	def __init__(self):
 		self.add_command("cookies", self.cmd_cookies)
-		self.add_command("<3", self.cmd_heart)
+		self.add_command("<3", self.cmd_heart, channels=("chat", "team_chat", "tell"))
 
 	def cmd_cookies(self, player, msg, channel):
 		channel.reply("^7For me? Thank you, {}!".format(player))
@@ -34,4 +34,4 @@ class fun(minqlbot.Plugin):
              "\n  o   o"
              "\n   o o"
              "\n    o")
-		self.msg(s.replace("o", "\x08"))
+		channel.reply(s.replace("o", "\x08"))
