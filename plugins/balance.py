@@ -315,7 +315,12 @@ class balance(minqlbot.Plugin):
                     if name not in self.cache: # Already in our cache?
                         self.cache[name] = player
                     else:
+<<<<<<< HEAD
                         self.cache[name]["alias_of"] = player["alias_of"]
+=======
+                        if "alias_of" in player:
+                            self.cache[name]["alias_of"] = player["alias_of"]
+>>>>>>> 95ab29569fb54aebdc28f912d03e44d599c85658
                         # Gotta be careful not to overwrite game types we've manually set ratings for.
                         for game_type in player:
                             if game_type not in self.cache[name] and game_type != "alias_of":
