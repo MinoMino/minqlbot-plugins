@@ -194,15 +194,16 @@ class balance(minqlbot.Plugin):
             name = player.clean_name.lower()
         else:
             name = self.clean_text(msg[1]).lower()
+
+        if not self.is_sane([name]):
+            return
         
         game = self.game()
         short_game_type = game.short_type
         c = self.db_query("SELECT rating FROM Ratings WHERE name=? AND game_type=?", name, short_game_type)
         row = c.fetchone()
         if not row:
-            # TODO: Fall back to QLRanks.
             self.individual_rating(name, channel, short_game_type)
-            #channel.reply("^7I have no {} rating data on ^6{}^7.".format(game.type, msg[1]))
             return
         else:
             channel.reply("^6{}^7's {} rating is set to ^6{}^7 on this server specifically."
@@ -473,7 +474,6 @@ class balance(minqlbot.Plugin):
 
         avg_red = self.team_average(teams["red"], game_type)
         avg_blue = self.team_average(teams["blue"], game_type)
-        avg_diff = abs(avg_red - avg_blue)
         switch = self.suggest_switch(teams, game_type)
         diff = len(teams["red"]) - len(teams["blue"])
         diff_rounded = abs(round(avg_red) - round(avg_blue)) # Round individual averages.
@@ -613,6 +613,12 @@ class balance(minqlbot.Plugin):
                 for p in team:
                     avg += self.cache[p.clean_name.lower()][game_type]["elo"]
                 avg /= len(team)
-        
+
         return avg
 
+    def is_sane(self, names):
+        for name in names:
+            if not ALPHANUMERICAL.match(name):
+                return False
+
+            return True
