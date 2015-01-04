@@ -42,13 +42,15 @@ lock. This makes it safe to add additional tasks, such as alternative shuffling 
 and whatnot without having to deal with that.
 """
 
-from threading import Thread, RLock
+from threading import RLock
 import plugins.qlranks as qlranks
 import minqlbot
 import random
+import re
 
 FAILS_ALLOWED = 2
 QLRANKS_GAMETYPES = ("ca", "ffa", "ctf", "duel", "tdm")
+ALPHANUMERICAL = re.compile(r"^[a-zA-Z0-9_]*$", flags=0)
 
 class balance(minqlbot.Plugin):
     def __init__(self):
@@ -233,7 +235,7 @@ class balance(minqlbot.Plugin):
         config = minqlbot.get_config()
         # Fetch players from the database first if the config is set to do so.
         if use_local and "Balance" in config and config["Balance"].getboolean("UseLocalRatings", fallback=False):
-            ratings = {"players": []} # We follow QLRanks' JSON format.
+            ratings = {"players": []}  # We follow QLRanks' JSON format.
             for name in names.copy():
                 c = self.db_query("SELECT game_type, rating FROM ratings WHERE name=?", name)
                 res = c.fetchall()
@@ -242,7 +244,7 @@ class balance(minqlbot.Plugin):
                     for row in res:
                         d[row["game_type"]] = {"elo": row["rating"], "rank": -1} # QLRanks' format.
                         if game_type == row["game_type"]:
-                            names.remove(name) # Got the one we need locally.
+                            names.remove(name)  # Got the one we need locally.
                     ratings["players"].append(d)
             if ratings["players"]:
                 self.cache_players(ratings, None)
@@ -504,7 +506,7 @@ class balance(minqlbot.Plugin):
             else:
                 channel.reply("^7Teams look good!")
             self.suggested_pair = None
-        
+
         return True
 
     def average_balance(self, channel, game_type):
@@ -519,7 +521,7 @@ class balance(minqlbot.Plugin):
 
         players = teams["red"] + teams["blue"]
         not_cached = self.not_cached(game_type, players)
-        
+
         if not_cached:
             with self.lock:
                 for lookup in self.lookups:
@@ -547,7 +549,7 @@ class balance(minqlbot.Plugin):
                         p = teams["blue"].pop()
                         self.put(p, "red")
                         teams["red"].append(p)
-                        
+
             # Start shuffling by looping through our suggestion function until
             # there are no more switches that can be done to improve teams.
             switch = self.suggest_switch(teams, game_type)
@@ -579,7 +581,7 @@ class balance(minqlbot.Plugin):
         cur_diff = abs(avg_red - avg_blue)
         min_diff = 999999
         best_pair = None
-        
+
         for red_p in teams["red"]:
             for blue_p in teams["blue"]:
                 r = teams["red"].copy()
@@ -594,7 +596,7 @@ class balance(minqlbot.Plugin):
                 if diff < min_diff:
                     min_diff = diff
                     best_pair = (red_p, blue_p)
-        
+
         if min_diff < cur_diff:
             return (best_pair, cur_diff - min_diff)
         else:
