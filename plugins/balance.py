@@ -286,10 +286,10 @@ class balance(minqlbot.Plugin):
             floor = 0
             ceiling = 0
             if "Balance" in config:
-                if "FloorRating" in config:
-                    floor = int(config["FloorRating"])
-                if "CeilingRating" in config:
-                    ceiling = int(config["CeilingRating"])
+                if "FloorRating" in config["Balance"]:
+                    floor = int(config["Balance"]["FloorRating"])
+                if "CeilingRating" in config["Balance"]:
+                    ceiling = int(config["Balance"]["CeilingRating"])
 
             with self.lock:
                 self.fails = 0 # Reset fail counter.
@@ -298,10 +298,14 @@ class balance(minqlbot.Plugin):
                 del player["nick"]
 
                 for game_type in player:
+                    if game_type == "alias_of": # Not a game type.
+                        continue
                     # Enforce floor and ceiling values if we have them.
                     if floor and player[game_type]["elo"] < floor:
+                        player[game_type]["real_elo"] = player[game_type]["elo"]
                         player[game_type]["elo"] = floor
                     elif ceiling and player[game_type]["elo"] > ceiling:
+                        player[game_type]["real_elo"] = player[game_type]["elo"]
                         player[game_type]["elo"] = ceiling
 
                 with self.lock:
@@ -406,18 +410,34 @@ class balance(minqlbot.Plugin):
 
                 return False
 
+        # NO DATA?
         long_game_type = minqlbot.GAMETYPES[minqlbot.GAMETYPES_SHORT.index(game_type)]
         if self.cache[name][game_type]["rank"] == 0:
             channel.reply("^7QLRanks has no data on ^6{}^7 for {}.".format(name, long_game_type))
             return True
+        # ALIAS?
         elif "alias_of" in self.cache[name]:
-            channel.reply("^6{}^7 is an alias of ^6{}^7, who is ranked #^6{}^7 in {} with a rating of ^6{}^7."
-                .format(name, self.cache[name]["alias_of"], self.cache[name][game_type]["rank"],
-                        long_game_type, self.cache[name][game_type]["elo"]))
+            if "real_elo" in self.cache[name][game_type]: # Ceiling/floor clipped rating?
+                real = self.cache[name][game_type]["real_elo"]
+                clipped = self.cache[name][game_type]["elo"]
+                channel.reply("^6{}^7 is an alias of ^6{}^7, who is ranked #^6{}^7 in {} with a rating of ^6{}^7, but treated as ^6{}^7."
+                    .format(name, self.cache[name]["alias_of"], self.cache[name][game_type]["rank"],
+                            long_game_type, real, clipped))
+            else:
+                channel.reply("^6{}^7 is an alias of ^6{}^7, who is ranked #^6{}^7 in {} with a rating of ^6{}^7."
+                    .format(name, self.cache[name]["alias_of"], self.cache[name][game_type]["rank"],
+                            long_game_type, self.cache[name][game_type]["elo"]))
             return True
+        # NORMAL
         else:
-            channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7."
-                .format(name, self.cache[name][game_type]["rank"], long_game_type, self.cache[name][game_type]["elo"]))
+            if "real_elo" in self.cache[name][game_type]: # Ceiling/floor clipped rating?
+                real = self.cache[name][game_type]["real_elo"]
+                clipped = self.cache[name][game_type]["elo"]
+                channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7, but treated as ^6{}^7."
+                    .format(name, self.cache[name][game_type]["rank"], long_game_type, real, clipped))
+            else:
+                channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7."
+                    .format(name, self.cache[name][game_type]["rank"], long_game_type, self.cache[name][game_type]["elo"]))
             return True
 
 
