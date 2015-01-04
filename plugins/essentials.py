@@ -58,7 +58,7 @@ class essentials(minqlbot.Plugin):
         self.add_command("db", self.cmd_db, 5, usage="<query>")
         self.add_command("seen", self.cmd_seen, usage="<full_name>")
         self.add_command("time", self.cmd_time, usage="[timezone_offset]")
-        self.add_command(("teamsize", "ts"), self.cmd_teamsize, usage="<size>")
+        self.add_command(("teamsize", "ts"), self.cmd_teamsize, 2, usage="<size>")
         self.add_command("exit", self.cmd_exit, 5)
 
         self.vote_resolve_timer = None
@@ -133,7 +133,7 @@ class essentials(minqlbot.Plugin):
 
     def cmd_no(self, player, msg, channel):
         if self.is_vote_active():
-            self.vote_yes()
+            self.vote_no()
         else:
             channel.reply("^7There's no active vote!")
 

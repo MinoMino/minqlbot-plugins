@@ -39,7 +39,7 @@ class ban(minqlbot.Plugin):
         self.add_command("ban", self.cmd_ban, 2, usage="<full_name> <length> seconds|minutes|hours|days|... [reason]")
         self.add_command("unban", self.cmd_unban, 2, usage="<full_name>")
         self.add_command("checkban", self.cmd_checkban, usage="<full_name>")
-        self.add_command("forgive", self.cmd_forgive, usage="<full_name> <leaves_to_forgive>")
+        self.add_command("forgive", self.cmd_forgive, 2, usage="<full_name> <leaves_to_forgive>")
 
         self.players_start = []
     
