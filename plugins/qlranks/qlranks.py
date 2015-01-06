@@ -24,7 +24,6 @@ Created on 19 Oct 2013
 
 import http.client
 import json
-import time
 import threading
 import minqlbot
 import traceback
@@ -62,6 +61,10 @@ class QlRanks(threading.Thread):
                 self.plugin.cache_players(None, self)
                 self.plugin.execute_pending() # execute_pending has endless loop prevention.
                 return
+
+            if "players" not in data:
+                raise Exception("QLRanks returned a valid, but unexpected JSON response.")
+
 
             if self.check_alias:
                 # Replace alias nicknames with real names.
