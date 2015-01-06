@@ -58,6 +58,7 @@ class balance(minqlbot.Plugin):
         self.add_hook("vote_called", self.handle_vote_called, priority=minqlbot.PRI_HIGH)
         self.add_hook("vote_ended", self.handle_vote_ended)
         self.add_hook("player_connect", self.handle_player_connect)
+        self.add_hook("team_switch", self.handle_team_switch)
         self.add_command(("teams", "teens"), self.cmd_teams)
         self.add_command("balance", self.cmd_balance, 1)
         self.add_command("do", self.cmd_do, 1)
@@ -111,6 +112,12 @@ class balance(minqlbot.Plugin):
         gametype = self.game().short_type
         if not self.is_cached(player.clean_name, gametype):
             self.fetch_player_ratings([player.clean_name.lower()], None, gametype)
+        self.check_rating_requirements([player.clean_name.lower()], None, gametype)
+
+    def handle_team_switch(self, player, old_team, new_team):
+        if new_team != "spectator":
+            gametype = self.game().short_type
+            self.check_rating_requirements([player.clean_name.lower()], None, gametype)
 
     def cmd_teams(self, player, msg, channel):
         teams = self.teams()
@@ -398,6 +405,52 @@ class balance(minqlbot.Plugin):
                 if task[0](*task[1]):
                     self.pending.remove(task)
 
+    def check_rating_requirements(self, names, channel, game_type):
+        """Checks if someone meets the rating requirements to play on the server."""
+        config = minqlbot.get_config()
+        min_rating = 0
+        max_rating = 0
+        if "Balance" in config:
+            if "MinimumRating" in config["Balance"]:
+                min_rating = int(config["Balance"]["MinimumRating"])
+            if "MaximumRating" in config["Balance"]:
+                max_rating = int(config["Balance"]["MaximumRating"])
+        else:
+            return True
+
+        if not min_rating and not max_rating:
+            return True
+
+        not_cached = self.not_cached(game_type, names)
+        if not_cached:
+            with self.lock:
+                for lookup in self.lookups:
+                    for n in self.lookups[lookup][1]:
+                        if n in not_cached:
+                            not_cached.remove(n)
+                if not_cached:
+                    self.fetch_player_ratings(not_cached, channel, game_type)
+                if (self.check_rating_requirements, (names, channel, game_type)) not in self.pending:
+                    self.pending.append((self.check_rating_requirements, (names, channel, game_type)))
+                return False
+
+        for name in names:
+            if self.cache[name][game_type]["elo"] > max_rating or self.cache[name][game_type]["elo"] < min_rating:
+                allow_spec = config["Balance"].getboolean("AllowSpectators", fallback=True)
+                if allow_spec:
+                    p = self.player(name)
+                    if p.team != "spectator":
+                        self.put(name, "spectator")
+                        if self.cache[name][game_type]["elo"] > max_rating:
+                            self.tell("^7Sorry, but you can have at most ^6{}^7 rating to play here, but you have ^6{}^7."
+                                .format(max_rating, self.cache[name][game_type]["elo"]), name)
+                        elif self.cache[name][game_type]["elo"] < min_rating:
+                            self.tell("^7Sorry, but you need at least ^6{}^7 rating to play here, but you have ^6{}^7."
+                                .format(min_rating, self.cache[name][game_type]["elo"]), name)
+                else:
+                    self.kickban(name)
+                    self.debug(name + " was kicked for not being within the rating requirements.")
+
     def individual_rating(self, name, channel, game_type):
         not_cached = self.not_cached(game_type, (name,))
         if not_cached:
@@ -407,10 +460,9 @@ class balance(minqlbot.Plugin):
                         if n in not_cached:
                             not_cached.remove(n)
                 if not_cached:
-                    if (self.individual_rating, (name, channel, game_type)) not in self.pending:
-                        self.pending.append((self.individual_rating, (name, channel, game_type)))
                     self.fetch_player_ratings(not_cached, channel, game_type, use_local=False, use_aliases=True)
-
+                if (self.individual_rating, (name, channel, game_type)) not in self.pending:
+                    self.pending.append((self.individual_rating, (name, channel, game_type)))
                 return False
 
         # NO DATA?
@@ -465,10 +517,9 @@ class balance(minqlbot.Plugin):
                         if n in not_cached:
                             not_cached.remove(n)
                 if not_cached:
-                    if (self.teams_info, (channel, game_type)) not in self.pending:
-                        self.pending.append((self.teams_info, (channel, game_type)))
                     self.fetch_player_ratings(not_cached, channel, game_type)
-
+                if (self.teams_info, (channel, game_type)) not in self.pending:
+                    self.pending.append((self.teams_info, (channel, game_type)))
                 # Let a later call to execute_pending come back to us.
                 return False
 
@@ -529,9 +580,9 @@ class balance(minqlbot.Plugin):
                         if n in not_cached:
                             not_cached.remove(n)
                 if not_cached:
-                    if (self.average_balance, (channel, game_type)) not in self.pending:
-                        self.pending.append((self.average_balance, (channel, game_type)))
                     self.fetch_player_ratings(not_cached, channel, game_type)
+                if (self.average_balance, (channel, game_type)) not in self.pending:
+                    self.pending.append((self.average_balance, (channel, game_type)))
                 # Let a later call to execute_pending come back to us.
                 return False
         else:
