@@ -442,10 +442,10 @@ class balance(minqlbot.Plugin):
                     if p.team != "spectator":
                         self.put(name, "spectator")
                         if self.cache[name][game_type]["elo"] > max_rating:
-                            self.tell("^7Sorry, but you can have at most ^6{}^7 rating to play here, but you have ^6{}^7."
+                            self.tell("^7Sorry, but you can have at most ^6{}^7 rating to play here and you have ^6{}^7."
                                 .format(max_rating, self.cache[name][game_type]["elo"]), name)
                         elif self.cache[name][game_type]["elo"] < min_rating:
-                            self.tell("^7Sorry, but you need at least ^6{}^7 rating to play here, but you have ^6{}^7."
+                            self.tell("^7Sorry, but you need at least ^6{}^7 rating to play here and you have ^6{}^7."
                                 .format(min_rating, self.cache[name][game_type]["elo"]), name)
                 else:
                     self.kickban(name)
