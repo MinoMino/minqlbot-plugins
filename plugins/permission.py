@@ -28,13 +28,13 @@ class permission(minqlbot.Plugin):
         if len(msg) < 3:
             return minqlbot.RET_USAGE
         else:
-            self.set_permissions(msg[1], msg[2], channel)
+            self.set_permissions(msg[1].lower(), msg[2], channel)
 
     def cmd_getperm(self, player, msg, channel):
         if len(msg) < 2:
             return minqlbot.RET_USAGE
         
-        perm = self.get_permission(msg[1])
+        perm = self.get_permission(msg[1].lower())
         if perm == None:
             channel.reply("^7I do not know ^6{}^7.".format(msg[1]))
         else:
@@ -67,11 +67,5 @@ class permission(minqlbot.Plugin):
             self.db_commit()
             channel.reply("^6{}^7's permission level has been set to ^6{}^7."
                 .format(name, lvl))
-            
-    def get_permission_level(self, name, channel): # Not to be confused with self.get_permission
-        perm = self.get_permission(name)
-        if perm == None:
-            channel.reply("^7I do not know ^6{}^7.".format(name))
-        else:
-            channel.reply("^6{}^7 has permission level ^6{}^7.".format(name, perm))
+
         
