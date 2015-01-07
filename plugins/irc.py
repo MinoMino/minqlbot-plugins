@@ -19,12 +19,11 @@
 import socket
 import asynchat
 import asyncore
-import time
 import re
 import minqlbot
 import traceback
 
-from threading import Thread, Timer, Lock
+from threading import Thread
 
 class IrcAdminChannel(minqlbot.AbstractChannel):
     """A channel, in the bot's context, for IRC.
