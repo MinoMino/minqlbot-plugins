@@ -471,9 +471,9 @@ class balance(minqlbot.Plugin):
                 return False
 
         # NO DATA?
-        long_game_type = minqlbot.GAMETYPES[minqlbot.GAMETYPES_SHORT.index(game_type)]
+        short_game_type = game_type.upper()
         if self.cache[name][game_type]["rank"] == 0:
-            channel.reply("^7QLRanks has no data on ^6{}^7 for {}.".format(name, long_game_type))
+            channel.reply("^7QLRanks has no data on ^6{}^7 for {}.".format(name, short_game_type))
             return True
         # ALIAS?
         elif "alias_of" in self.cache[name]:
@@ -482,11 +482,11 @@ class balance(minqlbot.Plugin):
                 clipped = self.cache[name][game_type]["elo"]
                 channel.reply("^6{}^7 is an alias of ^6{}^7, who is ranked #^6{}^7 in {} with a rating of ^6{}^7, but treated as ^6{}^7."
                     .format(name, self.cache[name]["alias_of"], self.cache[name][game_type]["rank"],
-                            long_game_type, real, clipped))
+                            short_game_type, real, clipped))
             else:
                 channel.reply("^6{}^7 is an alias of ^6{}^7, who is ranked #^6{}^7 in {} with a rating of ^6{}^7."
                     .format(name, self.cache[name]["alias_of"], self.cache[name][game_type]["rank"],
-                            long_game_type, self.cache[name][game_type]["elo"]))
+                            short_game_type, self.cache[name][game_type]["elo"]))
             return True
         # NORMAL
         else:
@@ -494,13 +494,11 @@ class balance(minqlbot.Plugin):
                 real = self.cache[name][game_type]["real_elo"]
                 clipped = self.cache[name][game_type]["elo"]
                 channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7, but treated as ^6{}^7."
-                    .format(name, self.cache[name][game_type]["rank"], long_game_type, real, clipped))
+                    .format(name, self.cache[name][game_type]["rank"], short_game_type, real, clipped))
             else:
                 channel.reply("^6{}^7 is ranked #^6{}^7 in {} with a rating of ^6{}^7."
-                    .format(name, self.cache[name][game_type]["rank"], long_game_type, self.cache[name][game_type]["elo"]))
+                    .format(name, self.cache[name][game_type]["rank"], short_game_type, self.cache[name][game_type]["elo"]))
             return True
-
-
 
     def teams_info(self, channel, game_type):
         """Send average team ratings and an improvement suggestion to whoever asked for it.
