@@ -435,18 +435,23 @@ class balance(minqlbot.Plugin):
                 return False
 
         for name in names:
-            if self.cache[name][game_type]["elo"] > max_rating or self.cache[name][game_type]["elo"] < min_rating:
+            if "real_elo" in self.cache[name][game_type]:
+                rating = self.cache[name][game_type]["real_elo"]
+            else:
+                rating = self.cache[name][game_type]["elo"]
+
+            if rating > max_rating or rating < min_rating:
                 allow_spec = config["Balance"].getboolean("AllowSpectators", fallback=True)
                 if allow_spec:
                     p = self.player(name)
                     if p.team != "spectator":
                         self.put(name, "spectator")
-                        if self.cache[name][game_type]["elo"] > max_rating:
+                        if rating > max_rating:
                             self.tell("^7Sorry, but you can have at most ^6{}^7 rating to play here and you have ^6{}^7."
-                                .format(max_rating, self.cache[name][game_type]["elo"]), name)
-                        elif self.cache[name][game_type]["elo"] < min_rating:
+                                .format(max_rating, rating), name)
+                        elif rating < min_rating:
                             self.tell("^7Sorry, but you need at least ^6{}^7 rating to play here and you have ^6{}^7."
-                                .format(min_rating, self.cache[name][game_type]["elo"]), name)
+                                .format(min_rating, rating), name)
                 else:
                     self.kickban(name)
                     self.debug(name + " was kicked for not being within the rating requirements.")
