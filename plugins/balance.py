@@ -70,7 +70,7 @@ class balance(minqlbot.Plugin):
         self.suggested_pair = None
         self.suggested_agree = [False, False]
 
-        self.lock = RLock()
+        self.rlock = RLock()
 
         # Keys: QlRanks().uid - Items: (QlRanks(), names, channel)
         self.lookups = {}
@@ -263,7 +263,7 @@ class balance(minqlbot.Plugin):
             return
 
         # Remove players we're already waiting a response for.
-        with self.lock:
+        with self.rlock:
             for lookup in self.lookups:
                 for n in self.lookups[lookup][1]:
                     if n in names:
@@ -276,7 +276,7 @@ class balance(minqlbot.Plugin):
             else:
                 conf_alias = False
             lookup = qlranks.QlRanks(self, names, check_alias=conf_alias)
-            with self.lock:
+            with self.rlock:
                 self.lookups[lookup.uid] = (lookup, names, channel)
             lookup.start()
             return True
@@ -301,7 +301,7 @@ class balance(minqlbot.Plugin):
                 if "CeilingRating" in config["Balance"]:
                     ceiling = int(config["Balance"]["CeilingRating"])
 
-            with self.lock:
+            with self.rlock:
                 self.fails = 0 # Reset fail counter.
             for player in ratings["players"]:
                 name = player["nick"]
@@ -318,7 +318,7 @@ class balance(minqlbot.Plugin):
                         player[game_type]["real_elo"] = player[game_type]["elo"]
                         player[game_type]["elo"] = ceiling
 
-                with self.lock:
+                with self.rlock:
                     # If it's an alias, go ahead and cache the real one as well.
                     if "alias_of" in player:
                         real_name = player["alias_of"]
@@ -338,14 +338,14 @@ class balance(minqlbot.Plugin):
         
             # The lookup's been dealt with, so we get rid of it.
             if lookup:
-                with self.lock:
+                with self.rlock:
                     del self.lookups[lookup.uid]
 
     def is_cached(self, name, game_type):
         """Checks if a player is cached or not.
 
         """
-        with self.lock:
+        with self.rlock:
             if name in self.cache and game_type in self.cache[name]:
                 return True
             else:
@@ -374,7 +374,7 @@ class balance(minqlbot.Plugin):
         """Handle lookups that failed due to timeouts and such
 
         """
-        with self.lock:
+        with self.rlock:
             self.fails += 1
             if self.fails < FAILS_ALLOWED or self.lookups[lookup.uid][2] == None:
                 del self.lookups[lookup.uid]
@@ -394,13 +394,13 @@ class balance(minqlbot.Plugin):
         # If limit is hit, clear pending requests and fail counter, then do nothing.
         # We don't want to keep requesting if something's wrong, but rather let a player
         # or an event trigger it again.
-        with self.lock:
+        with self.rlock:
             if self.fails >= FAILS_ALLOWED:
                 self.fails = 0
                 self.pending.clear()
                 return
 
-        with self.lock:
+        with self.rlock:
             for task in self.pending.copy():
                 if task[0](*task[1]):
                     self.pending.remove(task)
@@ -423,7 +423,7 @@ class balance(minqlbot.Plugin):
 
         not_cached = self.not_cached(game_type, names)
         if not_cached:
-            with self.lock:
+            with self.rlock:
                 for lookup in self.lookups:
                     for n in self.lookups[lookup][1]:
                         if n in not_cached:
@@ -459,7 +459,7 @@ class balance(minqlbot.Plugin):
     def individual_rating(self, name, channel, game_type):
         not_cached = self.not_cached(game_type, (name,))
         if not_cached:
-            with self.lock:
+            with self.rlock:
                 for lookup in self.lookups:
                     for n in self.lookups[lookup][1]:
                         if n in not_cached:
@@ -514,7 +514,7 @@ class balance(minqlbot.Plugin):
         not_cached = self.not_cached(game_type, players)
         
         if not_cached:
-            with self.lock:
+            with self.rlock:
                 for lookup in self.lookups:
                     for n in self.lookups[lookup][1]:
                         if n in not_cached:
@@ -577,7 +577,7 @@ class balance(minqlbot.Plugin):
         not_cached = self.not_cached(game_type, players)
 
         if not_cached:
-            with self.lock:
+            with self.rlock:
                 for lookup in self.lookups:
                     for n in self.lookups[lookup][1]:
                         if n in not_cached:
@@ -674,7 +674,7 @@ class balance(minqlbot.Plugin):
         avg = 0
 
         if team:
-            with self.lock:
+            with self.rlock:
                 for p in team:
                     avg += self.cache[p.clean_name.lower()][game_type]["elo"]
                 avg /= len(team)
