@@ -95,7 +95,9 @@ class essentials(minqlbot.Plugin):
                 min_teamsize = int(config["Essentials"]["MinimumTeamsize"])
                 if args < min_teamsize:
                     self.vote_no()
-
+        elif vote == "kick":
+            if args == minqlbot.NAME.lower():
+                self.vote_no()
 
     def handle_vote_ended(self, vote, args, vote_count, passed):
         if self.vote_resolve_timer and self.vote_resolve_timer.is_alive():
