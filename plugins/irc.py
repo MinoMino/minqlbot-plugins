@@ -134,6 +134,9 @@ class irc(minqlbot.Plugin):
             if state == "warmup" or state == "warmup":
                 self.privmsg(channel, "The game of {} is currently in warm-up on \x02{}\x02.\r\n"
                     .format(game.type, game.map))
+        # Bypass relay.
+        elif split_msg[0] == ".":
+            return
         # .cmd Send command to bot as admin.
         elif split_msg[0].startswith(minqlbot.COMMAND_PREFIX) and channel.lower() == self.admin_channel.lower() and len(split_msg):
             minqlbot.COMMANDS.handle_input(minqlbot.DummyPlayer(minqlbot.NAME), msg_text, self.irc_bot_channel)
@@ -142,11 +145,9 @@ class irc(minqlbot.Plugin):
             self.msg("^6<^7{}^6> ^2{}".format(user, msg_text))
     
     def handle_player_connect(self, player):
-        name = player.clean_name
         self.privmsg(self.channel, "{} connected.\r\n".format(self.translate_colors(player.name)))
     
     def handle_player_disconnect(self, player, reason):
-        name = player.clean_name
         if reason == "disconnect" or reason == "unknown":
             self.privmsg(self.channel, "{} disconnected.\r\n".format(self.translate_colors(player.name)))
         elif reason == "kick":
