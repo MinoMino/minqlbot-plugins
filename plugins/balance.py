@@ -440,16 +440,16 @@ class balance(minqlbot.Plugin):
             else:
                 rating = self.cache[name][game_type]["elo"]
 
-            if rating > max_rating or rating < min_rating:
+            if (rating > max_rating and max_rating != 0) or (rating < min_rating and min_rating != 0):
                 allow_spec = config["Balance"].getboolean("AllowSpectators", fallback=True)
                 if allow_spec:
                     p = self.player(name)
                     if p.team != "spectator":
                         self.put(name, "spectator")
-                        if rating > max_rating:
+                        if rating > max_rating and max_rating != 0:
                             self.tell("^7Sorry, but you can have at most ^6{}^7 rating to play here and you have ^6{}^7."
                                 .format(max_rating, rating), name)
-                        elif rating < min_rating:
+                        elif rating < min_rating and min_rating != 0:
                             self.tell("^7Sorry, but you need at least ^6{}^7 rating to play here and you have ^6{}^7."
                                 .format(min_rating, rating), name)
                 else:
