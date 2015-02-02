@@ -141,7 +141,7 @@ def get_profile(name):
     return parser.profile
 
 if __name__ == "__main__":
-    profile = get_profile("vodkaman")
+    profile = get_profile("Mino")
     
     print("Name: {}".format(profile.name))
     print("Country: {}".format(profile.country))
