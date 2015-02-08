@@ -262,10 +262,11 @@ class ban(minqlbot.Plugin):
                 self.debug("{} WAS KICKED FOR BEING AN ACCOUNT CREATED IN THE LAST {} DAYS.".format(name, days))
                 self.kickban(name)
         except:
+            import traceback
             e = traceback.format_exc().rstrip("\n")
-            debug("========== ERROR: {}@get_profile_thread ==========".format(self.__class__.__name__))
+            minqlbot.debug("========== ERROR: {}@get_profile_thread ==========".format(self.__class__.__name__))
             for line in e.split("\n"):
-                debug(line)
+                minqlbot.debug(line)
 
     def is_leaver_banning(self):
         config = minqlbot.get_config()
