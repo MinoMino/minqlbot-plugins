@@ -30,7 +30,7 @@ class ban(minqlbot.Plugin):
     def __init__(self):
         super().__init__()
         self.add_hook("player_connect", self.handle_player_connect, minqlbot.PRI_HIGH)
-        self.add_hook("countdown", self.handle_countdown)
+        self.add_hook("game_countdown", self.handle_game_countdown)
         self.add_hook("bot_connect", self.handle_bot_connect)
         self.add_hook("game_start", self.handle_game_start)
         self.add_hook("game_end", self.handle_game_end)
@@ -65,7 +65,7 @@ class ban(minqlbot.Plugin):
             if days > 0:
                 threading.Thread(target=self.get_profile_thread, args=(player.clean_name, days)).start()
 
-    def handle_countdown(self):
+    def handle_game_countdown(self):
         if self.is_leaver_banning():
             self.msg("^7Leavers are being kept track of. Repeat offenders ^6will^7 be banned.")
 
