@@ -107,6 +107,9 @@ class essentials(minqlbot.Plugin):
             self.msg("^7RIP vote.")
 
     def cmd_kick(self, player, msg, channel):
+        """Kicks a player by calling a kick vote and passing it.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -118,6 +121,9 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
 
     def cmd_kickban(self, player, msg, channel):
+        """Kicks a player using the \\kickban command. The ban will only last until the map changes.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -128,18 +134,23 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
 
     def cmd_yes(self, player, msg, channel):
+        """Passes the current vote."""
         if self.is_vote_active():
             self.vote_yes()
         else:
             channel.reply("^7There's no active vote!")
 
     def cmd_no(self, player, msg, channel):
+        """Vetoes the current vote."""
         if self.is_vote_active():
             self.vote_no()
         else:
             channel.reply("^7There's no active vote!")
 
     def cmd_switch(self, player, msg, channel):
+        """Switches the teams of the two players.
+
+        The names passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 3:
             return minqlbot.RET_USAGE
 
@@ -148,14 +159,17 @@ class essentials(minqlbot.Plugin):
         if n1 and n2:
             if not self.switch(n1, n2):
                 channel.reply("^7I can't switch those players.")
-        elif n1 and not n2:
+        elif not n1 and n2:
             channel.reply("^7I do not know '{}'.".format(msg[1]))
-        elif n2 and not n1:
+        elif not n2 and n1:
             channel.reply("^7I do not know '{}'.".format(msg[2]))
         else:
             channel.reply("^7I do not know '{}' nor '{}'.".format(msg[1], msg[2]))
             
     def cmd_red(self, player, msg, channel):
+        """Moves a player to the red team.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -166,6 +180,9 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
 
     def cmd_blue(self, player, msg, channel):
+        """Moves a player to the blue team.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -176,6 +193,9 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
 
     def cmd_spectate(self, player, msg, channel):
+        """Forces a player to spectate.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -186,12 +206,17 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
         
     def cmd_opme(self, player, msg, channel):
+        """Give the caller OP status."""
         self.op(player)
 
     def cmd_deopme(self, player, msg, channel):
+        """Removes OP status from the caller."""
         self.deop(player)
 
     def cmd_op(self, player, msg, channel):
+        """Give a player OP status.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -202,6 +227,9 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
 
     def cmd_deop(self, player, msg, channel):
+        """Remove a player's OP status.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -212,6 +240,9 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
 
     def cmd_mute(self, player, msg, channel):
+        """Mute a player.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -222,6 +253,9 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
 
     def cmd_unmute(self, player, msg, channel):
+        """Unmute a player.
+
+        The name passed can be the start of someone's name, not necessarily the whole name."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -232,48 +266,57 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7I do not know '{}'.".format(msg[1]))
     
     def cmd_allready(self, player, msg, channel):
+        """Forces all players to ready up."""
         if self.game().state == "warmup":
             self.allready()
         else:
             channel.reply("^7But the game's already on!")
         
     def cmd_abort(self, player, msg, channel):
+        """Forces a game in progress to go back to warmup."""
         if self.game().state == "in_progress":
             self.abort()
         else:
             channel.reply("^7But the game isn't even on!")
     
     def cmd_shuffle(self, player, msg, channel):
+        """Calls a shuffle vote and passes it immediately."""
         if not self.shuffle():
             channel.reply("^7Try again after the current vote.")
     
     def cmd_cointoss(self, player, msg, channel):
+        """Calls a cointoss vote and passes it immediately."""
         if not self.cointoss():
             channel.reply("^7Try again after the current vote.")
 
     def cmd_ruleset(self, player, msg, channel):
+        """Calls a ruleset vote and passes it immediately."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
         elif not self.ruleset(msg[1]):
             channel.reply("^7Try again after the current vote.")
     
     def cmd_map(self, player, msg, channel):
+        """Calls a map vote and passes it immediately."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
         elif not self.changemap(msg[1]):
             channel.reply("^7Try again after the current vote.")
 
     def cmd_opsay(self, player, msg, channel):
+        """Display a message to all players on the server using the \\opsay command."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
         self.opsay(" ".join(msg[1:]))
         
     def cmd_help(self, player, msg, channel):
+        """Responds with the bot's version and a link with more info about the bot itself."""
         channel.reply("^7minqlbot {} - See ^6http://minomino.org/quake/ ^7for more info."
             .format(minqlbot.__version__))
     
     def cmd_db(self, player, msg, channel):
+        """Executes an SQL query on the database."""
         if len(msg) == 1:
             return minqlbot.RET_USAGE
         
@@ -295,6 +338,7 @@ class essentials(minqlbot.Plugin):
             raise
 
     def cmd_seen(self, player, msg, channel):
+        """Responds with the last time a player was seen on the server."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
             
@@ -322,6 +366,7 @@ class essentials(minqlbot.Plugin):
                 channel.reply("^7I have never seen ^6{}^7 before.".format(name))
 
     def cmd_time(self, player, msg, channel):
+        """Responds with the current time."""
         tz_offset = 0
         if len(msg) > 1:
             try:
@@ -342,6 +387,7 @@ class essentials(minqlbot.Plugin):
                 .format(now.strftime(TIME_FORMAT)))
 
     def cmd_teamsize(self, player, msg, channel):
+        """Calls a teamsize vote and passes it immediately."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
         
@@ -354,6 +400,7 @@ class essentials(minqlbot.Plugin):
             channel.reply("^7Try again after the current vote.")
 
     def cmd_exit(self, player, msg, channel):
+        """Makes the bot clean up and stop functioning."""
         #TODO: IMPLEMENT
         pass
 
