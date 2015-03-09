@@ -270,7 +270,7 @@ class essentials(minqlbot.Plugin):
         self.opsay(" ".join(msg[1:]))
         
     def cmd_help(self, player, msg, channel):
-        channel.reply("^7minqlbot {} - See ^6http://minomino.org/quake/ ^7for more info."
+        channel.reply("^7minqlbot {} - See ^6http://github.com/MinoMino/minqlbot ^7for more info."
             .format(minqlbot.__version__))
     
     def cmd_db(self, player, msg, channel):
