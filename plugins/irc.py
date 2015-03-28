@@ -79,7 +79,7 @@ class irc(minqlbot.Plugin):
         self.privmsg(self.admin_channel, "{}\r\n".format(msg))
     
     def handle_game_chat(self, player, msg, channel):
-        if player.clean_name.lower() == minqlbot.NAME.lower() and msg.startswith("^6<^7"):
+        if (player.clean_name.lower() == minqlbot.NAME.lower() and msg.startswith("^6<^7")) or msg == "(muted)":
             # TODO: More elegant solution to msg.startswith("^6<^7")
             return
         elif channel == "chat":
@@ -134,6 +134,9 @@ class irc(minqlbot.Plugin):
             if state == "warmup" or state == "warmup":
                 self.privmsg(channel, "The game of {} is currently in warm-up on \x02{}\x02.\r\n"
                     .format(game.type, game.map))
+        # Bypass relay.
+        elif split_msg[0] == ".":
+            return
         # .cmd Send command to bot as admin.
         elif split_msg[0].startswith(minqlbot.COMMAND_PREFIX) and channel.lower() == self.admin_channel.lower() and len(split_msg):
             minqlbot.COMMANDS.handle_input(minqlbot.DummyPlayer(minqlbot.NAME), msg_text, self.irc_bot_channel)
