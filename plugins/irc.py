@@ -63,7 +63,7 @@ class irc(minqlbot.Plugin):
         self.admin_channel_pass = self.config["IRC"]["AdminChannelPassword"]
         self.color_translation = self.config["IRC"].getboolean("TranslateColors", fallback=False)
         self.irc_name = "QL" + minqlbot.NAME
-        self.irc = SimpleIrc(self.irc_name, "irc.quakenet.org", 6667, self.channel,
+        self.irc = SimpleIrc(self.irc_name, self.server, 6667, self.channel,
                              self.admin_channel, self.admin_channel_pass, self)
         self.irc_thread = Thread(target=self.irc.run)
         self.irc_thread.start()
@@ -142,11 +142,9 @@ class irc(minqlbot.Plugin):
             self.msg("^6<^7{}^6> ^2{}".format(user, msg_text))
     
     def handle_player_connect(self, player):
-        name = player.clean_name
         self.privmsg(self.channel, "{} connected.\r\n".format(self.translate_colors(player.name)))
     
     def handle_player_disconnect(self, player, reason):
-        name = player.clean_name
         if reason == "disconnect" or reason == "unknown":
             self.privmsg(self.channel, "{} disconnected.\r\n".format(self.translate_colors(player.name)))
         elif reason == "kick":
