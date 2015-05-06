@@ -41,9 +41,13 @@ class ban(minqlbot.Plugin):
         self.add_command("ban", self.cmd_ban, 2, usage="<full_name> <length> seconds|minutes|hours|days|... [reason]")
         self.add_command("unban", self.cmd_unban, 2, usage="<full_name>")
         self.add_command("checkban", self.cmd_checkban, usage="<full_name>")
-        self.add_command("forgive", self.cmd_forgive, 2, usage="<full_name> <leaves_to_forgive>")
+        self.add_command("forgive", self.cmd_forgive, 2, usage="<full_name> [leaves_to_forgive]")
 
+        # List of players playing that could potentially be considered leavers.
         self.players_start = []
+
+        # We flag players who ought to be kickbanned, but since we delay it, we keep
+        # a list of players who are flagged and prevent them from starting votes or joining.
         self.ban_flagged = []
         self.ban_flagged_lock = threading.RLock()
     
@@ -139,6 +143,12 @@ class ban(minqlbot.Plugin):
             self.vote_no()
 
     def cmd_ban(self, player, msg, channel):
+        """Bans a player temporarily. A very long period works for all intents and
+        purposes as a permanent ban, so there's no separate command for that.
+
+        Example #1: !ban Mino 1 day Very rude!
+
+        Example #2: !ban sponge 50 years"""
         if len(msg) < 4:
             return minqlbot.RET_USAGE
 
@@ -189,6 +199,7 @@ class ban(minqlbot.Plugin):
             return
 
     def cmd_unban(self, player, msg, channel):
+        """Unbans a player if banned."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -207,6 +218,7 @@ class ban(minqlbot.Plugin):
             channel.reply("^7 No active bans on ^6{}^7 found.".format(name))
 
     def cmd_checkban(self, player, msg, channel):
+        """Checks whether a player has been banned, and if so, why."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -227,7 +239,8 @@ class ban(minqlbot.Plugin):
         channel.reply("^6{} ^7is not banned.".format(msg[1]))
 
     def cmd_forgive(self, player, msg, channel):
-        if len(msg) < 3:
+        """Removes a leave from a player. Optional integer can be provided to remove multiple leaves."""
+        if len(msg) < 2:
             return minqlbot.RET_USAGE
 
         c = self.db_query("SELECT games_left FROM Players WHERE name=?", msg[1])
@@ -239,11 +252,14 @@ class ban(minqlbot.Plugin):
             channel.reply("^6{}^7's leaves are already at ^6{}^7.".format(msg[1], row["games_left"]))
             return
 
-        try:
-            leaves_to_forgive = int(msg[2])
-        except ValueError:
-            channel.reply("^7Unintelligible number of leaves to forgive. Please use numbers.")
-            return
+        if len(msg) == 2:
+            leaves_to_forgive = 1
+        else:
+            try:
+                leaves_to_forgive = int(msg[2])
+            except ValueError:
+                channel.reply("^7Unintelligible number of leaves to forgive. Please use numbers.")
+                return
 
         new_leaves = row["games_left"] - leaves_to_forgive
         if new_leaves < 0:
