@@ -63,7 +63,7 @@ class irc(minqlbot.Plugin):
         self.admin_channel_pass = self.config["IRC"]["AdminChannelPassword"]
         self.color_translation = self.config["IRC"].getboolean("TranslateColors", fallback=False)
         self.irc_name = "QL" + minqlbot.NAME
-        self.irc = SimpleIrc(self.irc_name, "irc.quakenet.org", 6667, self.channel,
+        self.irc = SimpleIrc(self.irc_name, self.server, 6667, self.channel,
                              self.admin_channel, self.admin_channel_pass, self)
         self.irc_thread = Thread(target=self.irc.run)
         self.irc_thread.start()
@@ -79,7 +79,7 @@ class irc(minqlbot.Plugin):
         self.privmsg(self.admin_channel, "{}\r\n".format(msg))
     
     def handle_game_chat(self, player, msg, channel):
-        if player.clean_name.lower() == minqlbot.NAME.lower() and msg.startswith("^6<^7"):
+        if (player.clean_name.lower() == minqlbot.NAME.lower() and msg.startswith("^6<^7")) or msg == "(muted)":
             # TODO: More elegant solution to msg.startswith("^6<^7")
             return
         elif channel == "chat":

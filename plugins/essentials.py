@@ -311,8 +311,7 @@ class essentials(minqlbot.Plugin):
         self.opsay(" ".join(msg[1:]))
         
     def cmd_help(self, player, msg, channel):
-        """Responds with the bot's version and a link with more info about the bot itself."""
-        channel.reply("^7minqlbot {} - See ^6http://minomino.org/quake/ ^7for more info."
+        channel.reply("^7minqlbot {} - See ^6github.com/MinoMino/minqlbot ^7for more info."
             .format(minqlbot.__version__))
     
     def cmd_db(self, player, msg, channel):
