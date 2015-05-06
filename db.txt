@@ -37,3 +37,13 @@ CREATE TABLE Ratings (
     PRIMARY KEY (name, game_type),
     FOREIGN KEY(name) REFERENCES Players(name) ON DELETE CASCADE
 );
+
+CREATE TABLE Silences (
+    name        TEXT,
+    issued      DATE,
+    expires     DATE NOT NULL,
+    active      BOOLEAN NOT NULL,
+    reason      TEXT,
+    PRIMARY KEY (name, issued),
+    FOREIGN KEY(name) REFERENCES Players(name) ON DELETE CASCADE
+);
