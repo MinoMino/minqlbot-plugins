@@ -466,8 +466,10 @@ class balance(minqlbot.Plugin):
             if (rating > max_rating and max_rating != 0) or (rating < min_rating and min_rating != 0):
                 allow_spec = config["Balance"].getboolean("AllowSpectators", fallback=True)
                 if allow_spec:
-                    p = self.player(name)
-                    if p.team != "spectator":
+                    player = self.player(name)
+                    if not player:
+                        return True
+                    if player.team != "spectator":
                         self.put(name, "spectator")
                         if rating > max_rating and max_rating != 0:
                             self.tell("^7Sorry, but you can have at most ^6{}^7 rating to play here and you have ^6{}^7."
@@ -477,10 +479,16 @@ class balance(minqlbot.Plugin):
                                 .format(min_rating, rating), name)
                 else:
                     player = self.player(name)
+                    if not player:
+                        return True
+                    elif player.team != "spectator":
+                        self.put(player, "spectator")
                     self.flag_player(player)
                     player.mute()
-                    self.delay(20, lambda: player.tell("^7You do not meet the rating requirements on this server. You will be kicked shortly."))
+                    self.delay(25, lambda: player.tell("^7You do not meet the rating requirements on this server. You will be kicked shortly."))
                     self.delay(60, player.kickban)
+
+        return True
 
     def individual_rating(self, name, channel, game_type):
         not_cached = self.not_cached(game_type, (name,))
