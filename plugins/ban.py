@@ -57,7 +57,7 @@ class ban(minqlbot.Plugin):
         if status and status[0] == "ban":
             self.flag_player(player)
             player.mute()
-            self.delay(20, lambda: player.tell("^7You have been banned from this server for leaving too many games."))
+            self.delay(25, lambda: player.tell("^7You have been banned from this server for leaving too many games."))
             self.delay(60, player.kickban)
             # Stop plugins on lowest priority from triggering this event since we're kicking.
             return minqlbot.RET_STOP
@@ -291,10 +291,13 @@ class ban(minqlbot.Plugin):
         try:
             pro = qlprofile.get_profile(player.clean_name)
             if not pro.is_eligible(days):
-                self.flag_player(player)
-                player.mute()
-                self.delay(20, lambda: player.tell("^7Sorry, but your account is too new to play here. You will be kicked shortly."))
-                self.delay(60, player.kickban)
+                if player.valid:
+                    if player.team != "spectator":
+                        player.put("spectator")
+                    self.flag_player(player)
+                    player.mute()
+                    self.delay(25, lambda: player.tell("^7Sorry, but your account is too new to play here. You will be kicked shortly."))
+                    self.delay(60, player.kickban)
         except:
             e = traceback.format_exc().rstrip("\n")
             self.debug("========== ERROR: {}@get_profile_thread ==========".format(self.__class__.__name__))
