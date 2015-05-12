@@ -54,11 +54,11 @@ class serverratings(minqlbot.Plugin):
 
         if teams["red"]:
             red_sorted = sorted(teams["red"], key=lambda x: balance.cache[x.clean_name.lower()][game_type]["elo"], reverse=True)
-            red = "^7" + ", ".join(["{}: ^1{}^7".format(p, balance.cache[p.clean_name.lower()][game_type]["elo"]) for p in red_sorted])
+            red = "^7" + ", ".join(["{}: ^1{}^7".format(p.clean_name, balance.cache[p.clean_name.lower()][game_type]["elo"]) for p in red_sorted])
             channel.reply(red)
         if teams["blue"]:
             blue_sorted = sorted(teams["blue"], key=lambda x: balance.cache[x.clean_name.lower()][game_type]["elo"], reverse=True)
-            blue = "^7" + ", ".join(["{}: ^4{}^7".format(p, balance.cache[p.clean_name.lower()][game_type]["elo"]) for p in blue_sorted])
+            blue = "^7" + ", ".join(["{}: ^4{}^7".format(p.clean_name, balance.cache[p.clean_name.lower()][game_type]["elo"]) for p in blue_sorted])
             channel.reply(blue)
         
         return True
