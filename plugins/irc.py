@@ -122,7 +122,7 @@ class irc(minqlbot.Plugin):
                 pslist = plist + slist.rstrip(", ")
                 # Message the info to the channel.
                 self.privmsg(channel, "{}'s server currently has \x02{}\x02 player(s) and \x02{}\x02 spectator(s) on \x02{}\x02:\r\n"
-                    .format(minqlbot.NAME, len(teams["red"] + teams["blue"] + teams["default"]), len(teams["spectator"]), game.map))
+                    .format(minqlbot.NAME, len(teams["red"] + teams["blue"] + teams["free"]), len(teams["spectator"]), game.map))
                 self.privmsg(channel, "{}\r\n".format(pslist))
         # .score/.map - Return the score of the current game.
         elif split_msg[0] == ".score" or split_msg[0] == ".map" or split_msg[0] == ".info":
