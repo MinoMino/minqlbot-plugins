@@ -19,6 +19,7 @@
 #Some essential functions.
 
 import minqlbot
+import plugins
 import datetime
 import re
 
@@ -54,7 +55,7 @@ class essentials(minqlbot.Plugin):
         self.add_command("ruleset", self.cmd_ruleset, 3, usage="<ruleset>")
         self.add_command("map", self.cmd_map, 2, usage="<mapname>")
         self.add_command("opsay", self.cmd_opsay, 3, usage="<message>")
-        self.add_command(("help", "about", "commands"), self.cmd_help)
+        self.add_command(("help", "about", "commands", "version"), self.cmd_help)
         self.add_command("db", self.cmd_db, 5, usage="<query>")
         self.add_command("seen", self.cmd_seen, usage="<full_name>")
         self.add_command("time", self.cmd_time, usage="[timezone_offset]")
@@ -311,8 +312,8 @@ class essentials(minqlbot.Plugin):
         self.opsay(" ".join(msg[1:]))
         
     def cmd_help(self, player, msg, channel):
-        channel.reply("^7minqlbot {} - See ^6github.com/MinoMino/minqlbot ^7for more info."
-            .format(minqlbot.__version__))
+        channel.reply("^7minqlbot: ^6{}^7 - Plugins: ^6v{}".format(minqlbot.__version__, plugins.__version__))
+        channel.reply("^7See ^6github.com/MinoMino/minqlbot^7 for more info about the bot and its commands.")
     
     def cmd_db(self, player, msg, channel):
         """Executes an SQL query on the database."""
