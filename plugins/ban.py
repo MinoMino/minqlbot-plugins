@@ -58,7 +58,7 @@ class ban(minqlbot.Plugin):
             self.flag_player(player)
             player.mute()
             self.delay(25, lambda: player.tell("^7You have been banned from this server for leaving too many games."))
-            self.delay(60, player.kickban)
+            self.delay(40, player.kickban)
             # Stop plugins on lowest priority from triggering this event since we're kicking.
             return minqlbot.RET_STOP
         # Check if player needs to be warned.
@@ -297,7 +297,7 @@ class ban(minqlbot.Plugin):
                     self.flag_player(player)
                     player.mute()
                     self.delay(25, lambda: player.tell("^7Sorry, but your account is too new to play here. You will be kicked shortly."))
-                    self.delay(60, player.kickban)
+                    self.delay(40, player.kickban)
         except:
             e = traceback.format_exc().rstrip("\n")
             self.debug("========== ERROR: {}@get_profile_thread ==========".format(self.__class__.__name__))

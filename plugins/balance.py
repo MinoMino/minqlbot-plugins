@@ -510,7 +510,7 @@ class balance(minqlbot.Plugin):
                     self.flag_player(player)
                     player.mute()
                     self.delay(25, lambda: player.tell("^7You do not meet the rating requirements on this server. You will be kicked shortly."))
-                    self.delay(60, player.kickban)
+                    self.delay(40, player.kickban)
 
         return True
 
