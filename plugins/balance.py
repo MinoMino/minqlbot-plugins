@@ -176,9 +176,7 @@ class balance(minqlbot.Plugin):
     def cmd_do(self, player, msg, channel):
         """Forces a suggested switch to be done."""
         if self.suggested_pair:
-            self.switch(self.suggested_pair[0], self.suggested_pair[1])
-            self.suggested_pair = None
-            self.suggested_agree = [False, False]
+            self.execute_suggestion()
 
     def cmd_agree(self, player, msg, channel):
         """After the bot suggests a switch, players in question can use this to agree to the switch."""
