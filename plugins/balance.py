@@ -180,7 +180,7 @@ class balance(minqlbot.Plugin):
 
     def cmd_agree(self, player, msg, channel):
         """After the bot suggests a switch, players in question can use this to agree to the switch."""
-        if self.suggested_pair:
+        if self.suggested_pair and not (self.suggested_agree[0] and self.suggested_agree[1]):
             if self.suggested_pair[0] == player:
                 self.suggested_agree[0] = True
             elif self.suggested_pair[1] == player:
