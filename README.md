@@ -6,6 +6,8 @@ A collection of plugins for minqlbot.
 This is a repository of the default config file, the database tables (including an initialized empty database),
 and more importantly the plugins themselves.
 
+The command list can be found [over here](http://github.com/MinoMino/minqlbot/wiki/Command-List). Note that not all plugins in the command list are necessarily loaded by default. Edit the config's `Plugins` field to make it the various plugins load on launch.
+
 Documentation will come later.
 
 Installation
