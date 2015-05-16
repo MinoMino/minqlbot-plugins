@@ -401,8 +401,7 @@ class essentials(minqlbot.Plugin):
 
     def cmd_exit(self, player, msg, channel):
         """Makes the bot clean up and stop functioning."""
-        #TODO: IMPLEMENT
-        pass
+        minqlbot.console_command("bot exit")
 
     # ====================================================================
     #                               HELPERS
