@@ -1,5 +1,5 @@
 # minqlbot - A Quake Live server administrator bot.
-# Copyright (C) Mino <mino@minomino.org>
+# Copyright (C) 2015 Mino <mino@minomino.org>
 
 # This file is part of minqlbot.
 
@@ -21,6 +21,7 @@ import re
 import plugins.qlprofile as qlprofile
 import minqlbot
 import threading
+import traceback
 
 LENGTH_REGEX = re.compile(r"(?P<number>[0-9]+) (?P<scale>seconds?|minutes?|hours?|days?|weeks?|months?|years?)")
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -30,24 +31,34 @@ class ban(minqlbot.Plugin):
     def __init__(self):
         super().__init__()
         self.add_hook("player_connect", self.handle_player_connect, minqlbot.PRI_HIGH)
+        self.add_hook("player_disconnect", self.handle_player_disconnect)
         self.add_hook("game_countdown", self.handle_game_countdown)
         self.add_hook("bot_connect", self.handle_bot_connect)
         self.add_hook("game_start", self.handle_game_start)
         self.add_hook("game_end", self.handle_game_end)
         self.add_hook("team_switch", self.handle_team_switch)
-        self.add_hook("player_disconnect", self.handle_player_disconnect)
+        self.add_hook("vote_called", self.handle_vote_called)
         self.add_command("ban", self.cmd_ban, 2, usage="<full_name> <length> seconds|minutes|hours|days|... [reason]")
         self.add_command("unban", self.cmd_unban, 2, usage="<full_name>")
         self.add_command("checkban", self.cmd_checkban, usage="<full_name>")
-        self.add_command("forgive", self.cmd_forgive, 2, usage="<full_name> <leaves_to_forgive>")
+        self.add_command("forgive", self.cmd_forgive, 2, usage="<full_name> [leaves_to_forgive]")
 
+        # List of players playing that could potentially be considered leavers.
         self.players_start = []
+
+        # We flag players who ought to be kickbanned, but since we delay it, we keep
+        # a list of players who are flagged and prevent them from starting votes or joining.
+        self.ban_flagged = []
+        self.ban_flagged_lock = threading.RLock()
     
     def handle_player_connect(self, player):
         status = self.leave_status(player.name)
         # Check if a player has been banned for leaving, if we're doing that.
         if status and status[0] == "ban":
-            self.kickban(player)
+            self.flag_player(player)
+            player.mute()
+            self.delay(25, lambda: player.tell("^7You have been banned from this server for leaving too many games."))
+            self.delay(40, player.kickban)
             # Stop plugins on lowest priority from triggering this event since we're kicking.
             return minqlbot.RET_STOP
         # Check if player needs to be warned.
@@ -55,15 +66,25 @@ class ban(minqlbot.Plugin):
             self.delay(12, self.warn_player, args=(player, status[1]))
         # Check if a player has been banned manually.
         elif self.is_banned(player.name):
-            self.kickban(player)
-            # Stop plugins on lowest priority from triggering this event since we're kicking.
+            self.flag_player(player)
+            self.delay(5, player.kickban)
+            # Stop plugins on lower priority from triggering this event since we're kicking.
             return minqlbot.RET_STOP
 
         config = minqlbot.get_config()
         if "Ban" in config and "MinimumDaysRegistered" in config["Ban"]:
             days = int(config["Ban"]["MinimumDaysRegistered"])
             if days > 0:
-                threading.Thread(target=self.get_profile_thread, args=(player.clean_name, days)).start()
+                threading.Thread(target=self.get_profile_thread, args=(player, days)).start()
+
+    def handle_player_disconnect(self, player, reason):
+        # Allow people to disconnect without getting a leave if teams are uneven.
+        teams = self.teams()
+        if len(teams["red"] + teams["blue"]) % 2 == 0 and player in self.players_start:
+            self.players_start.remove(player)
+        
+        if player in self.ban_flagged:
+            self.unflag_player(player)
 
     def handle_game_countdown(self):
         if self.is_leaver_banning():
@@ -103,26 +124,31 @@ class ban(minqlbot.Plugin):
             self.players_start = []
 
     def handle_team_switch(self, player, old_team, new_team):
+        # Prevent flagged players from joining.
+        if self.is_flagged(player) and old_team == "spectator":
+            player.put("spectator")
+
         # Allow people to spectate without getting a leave if teams are uneven.
         if (old_team == "red" or old_team == "blue") and new_team == "spectator":
             teams = self.teams()
             if len(teams["red"] + teams["blue"]) % 2 == 0 and player in self.players_start:
                 self.players_start.remove(player)
-                self.debug("Removed {} from start list for speccing.".format(player.clean_name))
         # Add people to the list of participating players if they join mid-game.
         if (old_team == "spectator" and (new_team == "red" or new_team == "blue") and
          self.game().state == "in_progress" and player not in self.players_start):
             self.players_start.append(player)
-            self.debug("Added {} to start list for joining.".format(player.clean_name))
 
-    def handle_player_disconnect(self, player, reason):
-        # Allow people to disconnect without getting a leave if teams are uneven.
-        teams = self.teams()
-        if len(teams["red"] + teams["blue"]) % 2 == 0 and player in self.players_start:
-            self.players_start.remove(player)
-            #self.debug("Removed {} from start list for disconnecting.".format(player.clean_name))
+    def handle_vote_called(self, caller, vote, args):
+        if self.is_flagged(caller):
+            self.vote_no()
 
     def cmd_ban(self, player, msg, channel):
+        """Bans a player temporarily. A very long period works for all intents and
+        purposes as a permanent ban, so there's no separate command for that.
+
+        Example #1: !ban Mino 1 day Very rude!
+
+        Example #2: !ban sponge 50 years"""
         if len(msg) < 4:
             return minqlbot.RET_USAGE
 
@@ -173,6 +199,7 @@ class ban(minqlbot.Plugin):
             return
 
     def cmd_unban(self, player, msg, channel):
+        """Unbans a player if banned."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -191,6 +218,7 @@ class ban(minqlbot.Plugin):
             channel.reply("^7 No active bans on ^6{}^7 found.".format(name))
 
     def cmd_checkban(self, player, msg, channel):
+        """Checks whether a player has been banned, and if so, why."""
         if len(msg) < 2:
             return minqlbot.RET_USAGE
 
@@ -211,7 +239,8 @@ class ban(minqlbot.Plugin):
         channel.reply("^6{} ^7is not banned.".format(msg[1]))
 
     def cmd_forgive(self, player, msg, channel):
-        if len(msg) < 3:
+        """Removes a leave from a player. Optional integer can be provided to remove multiple leaves."""
+        if len(msg) < 2:
             return minqlbot.RET_USAGE
 
         c = self.db_query("SELECT games_left FROM Players WHERE name=?", msg[1])
@@ -223,11 +252,14 @@ class ban(minqlbot.Plugin):
             channel.reply("^6{}^7's leaves are already at ^6{}^7.".format(msg[1], row["games_left"]))
             return
 
-        try:
-            leaves_to_forgive = int(msg[2])
-        except ValueError:
-            channel.reply("^7Unintelligible number of leaves to forgive. Please use numbers.")
-            return
+        if len(msg) == 2:
+            leaves_to_forgive = 1
+        else:
+            try:
+                leaves_to_forgive = int(msg[2])
+            except ValueError:
+                channel.reply("^7Unintelligible number of leaves to forgive. Please use numbers.")
+                return
 
         new_leaves = row["games_left"] - leaves_to_forgive
         if new_leaves < 0:
@@ -255,17 +287,22 @@ class ban(minqlbot.Plugin):
                     return row["expires"], row["reason"]
         return None
     
-    def get_profile_thread(self, name, days):
+    def get_profile_thread(self, player, days):
         try:
-            pro = qlprofile.get_profile(name)
+            pro = qlprofile.get_profile(player.clean_name)
             if not pro.is_eligible(days):
-                self.debug("{} WAS KICKED FOR BEING AN ACCOUNT CREATED IN THE LAST {} DAYS.".format(name, days))
-                self.kickban(name)
+                if player.valid:
+                    if player.team != "spectator":
+                        player.put("spectator")
+                    self.flag_player(player)
+                    player.mute()
+                    self.delay(25, lambda: player.tell("^7Sorry, but your account is too new to play here. You will be kicked shortly."))
+                    self.delay(40, player.kickban)
         except:
             e = traceback.format_exc().rstrip("\n")
-            debug("========== ERROR: {}@get_profile_thread ==========".format(self.__class__.__name__))
+            self.debug("========== ERROR: {}@get_profile_thread ==========".format(self.__class__.__name__))
             for line in e.split("\n"):
-                debug(line)
+                self.debug(line)
 
     def is_leaver_banning(self):
         config = minqlbot.get_config()
@@ -319,10 +356,19 @@ class ban(minqlbot.Plugin):
         return (action, ratio)
 
     def warn_player(self, player, ratio):
-        self.tell("^7You have only completed ^6{}^7 percent of your games.".format(round(ratio * 100, 1)), player)
-        self.tell("^7If you keep leaving you ^6will^7 be banned.", player)
+        player.tell("^7You have only completed ^6{}^7 percent of your games.".format(round(ratio * 100, 1)))
+        player.tell("^7If you keep leaving you ^6will^7 be banned.")
 
-            
+    def flag_player(self, player):
+        with self.ban_flagged_lock:
+            if player not in self.ban_flagged:
+                self.ban_flagged.append(player)
+    
+    def unflag_player(self, player):
+        with self.ban_flagged_lock:
+            if player in self.ban_flagged:
+                self.ban_flagged.remove(player)
 
-                
-
+    def is_flagged(self, player):
+        with self.ban_flagged_lock:
+            return player in self.ban_flagged
