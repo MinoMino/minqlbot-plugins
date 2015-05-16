@@ -48,10 +48,13 @@ import minqlbot
 import random
 import re
 import threading
+import datetime
 
 FAILS_ALLOWED = 2
 QLRANKS_GAMETYPES = ("ca", "ffa", "ctf", "duel", "tdm")
 ALPHANUMERICAL = re.compile(r"^[a-zA-Z0-9_]*$", flags=0)
+# Time window in seconds after round_countdown where players could switch right away with !a.
+AGREE_WINDOW = 7
 
 class balance(minqlbot.Plugin):
     def __init__(self):
@@ -60,6 +63,8 @@ class balance(minqlbot.Plugin):
         self.add_hook("vote_ended", self.handle_vote_ended)
         self.add_hook("player_connect", self.handle_player_connect)
         self.add_hook("team_switch", self.handle_team_switch)
+        self.add_hook("round_countdown", self.handle_round_countdown)
+        self.add_hook("game_end", self.handle_game_end)
         self.add_command(("teams", "teens"), self.cmd_teams)
         self.add_command("balance", self.cmd_balance, 1)
         self.add_command("do", self.cmd_do, 1)
@@ -86,6 +91,9 @@ class balance(minqlbot.Plugin):
         # a list of players who are flagged and prevent them from starting votes or joining.
         self.ban_flagged = []
         self.ban_flagged_lock = threading.RLock()
+
+        # A datetime.datetime instance of the point in time of the last round countdown.
+        self.countdown = None
 
     def handle_vote_called(self, caller, vote, args):
         if self.is_flagged(caller):
@@ -133,6 +141,18 @@ class balance(minqlbot.Plugin):
                 gametype = self.game().short_type
                 self.check_rating_requirements([player.clean_name.lower()], None, gametype)
 
+    def handle_round_countdown(self, round):
+        if self.suggested_agree[0] and self.suggested_agree[1]:
+            self.execute_suggestion()
+        
+        self.countdown = datetime.datetime.now()
+
+    def handle_game_end(self, game, score, winner):
+        # Clear suggestion when the game ends to avoid weird behavior if a pending switch
+        # is present and the players decide to do a rematch without doing !teams in-between.
+        self.suggested_pair = None
+        self.suggested_agree = [False, False]
+
     def cmd_teams(self, player, msg, channel):
         """Displays the average ratings of each team, the difference between those values,
         as well as a switch suggestion that the bot determined would improve balance."""
@@ -167,11 +187,17 @@ class balance(minqlbot.Plugin):
                 self.suggested_agree[0] = True
             elif self.suggested_pair[1] == player:
                 self.suggested_agree[1] = True
-                
+
             if self.suggested_agree[0] and self.suggested_agree[1]:
-                self.switch(self.suggested_pair[0], self.suggested_pair[1])
-                self.suggested_pair = None
-                self.suggested_agree = [False, False]
+                # If the game's in progress and we're not in the round_countdown time window, wait for next round.
+                if self.game().state == "in_progress" and self.countdown:
+                    td = datetime.datetime.now() - self.countdown
+                    if td.seconds > AGREE_WINDOW:
+                        self.msg("^7The switch will be executed at the start of next round.")
+                        return
+
+                # Otherwise, switch right away.
+                self.execute_suggestion()
 
     def cmd_setrating(self, player, msg, channel):
         """Set a player's rating locally, in the game mode the bot is currently in."""
@@ -721,6 +747,11 @@ class balance(minqlbot.Plugin):
                 return False
 
             return True
+
+    def execute_suggestion(self):
+        self.switch(self.suggested_pair[0], self.suggested_pair[1])
+        self.suggested_pair = None
+        self.suggested_agree = [False, False]
 
     def flag_player(self, player):
         with self.ban_flagged_lock:
