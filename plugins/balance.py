@@ -260,7 +260,7 @@ class balance(minqlbot.Plugin):
             return
         else:
             channel.reply("^6{}^7's {} rating is set to ^6{}^7 on this server specifically."
-                .format(msg[1], game.type, row["rating"]))
+                .format(name, game.type, row["rating"]))
 
     def cmd_remrating(self, player, msg, channel):
         """Remove a locally set rating in the game mode the bot is currently in."""
